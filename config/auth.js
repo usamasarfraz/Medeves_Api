@@ -6,7 +6,7 @@ module.exports = (req, res, next) => {
     var ath;
     var token = req.headers['authorization'];
     if (token) {
-        jwt.verify(token, config.SECRET, async function (err, decoded) {
+        jwt.verify(token, config.SECRET, async (err, decoded) => {
             if (err) {
                 ath = {
                     status: false,
