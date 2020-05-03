@@ -63,7 +63,7 @@ exports.login = async (req, res) => {
                 User().findOneAndUpdate({ _id: result._id },{ device_token: device_token });
                 let user = result;
                 jwt.sign(
-                    user,
+                    { user },
                     constants.SECRET,
                     {
                         expiresIn: constants.EXPIRES_IN
@@ -116,7 +116,8 @@ exports.register = async (req, res) => {
 	let pwd = req.body.password;
     let enc_pwd = pwd ? md5(pwd) : null;
     req.body.password = enc_pwd;
-    let RegisterData = new User(req.body)
+    let NewUser = User();
+    let RegisterData = new NewUser(req.body)
 	RegisterData.save((err,result) => {
         if (err) {
             res.send({
@@ -128,7 +129,7 @@ exports.register = async (req, res) => {
         if (result) {
             let user = result;
             jwt.sign(
-                user,
+                { user },
                 constants.SECRET,
                 {
                     expiresIn: constants.EXPIRES_IN
@@ -136,7 +137,7 @@ exports.register = async (req, res) => {
                     if (err) {
                         res.send({
                             status: false,
-                            err: err
+                            err: err.message
                         });
                         return;
                     } else {
@@ -223,7 +224,7 @@ exports.refreshToken = async (req, res) => {
             }
             if(result){
                 let user = result;
-                jwt.sign(user, constants.SECRET, { expiresIn: constants.EXPIRES_IN },async (err,token)=>{
+                jwt.sign({ user }, constants.SECRET, { expiresIn: constants.EXPIRES_IN },async (err,token)=>{
                     if (err) {
                         res.send({
                             status: false,
