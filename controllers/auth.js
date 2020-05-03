@@ -115,53 +115,62 @@ exports.login = async (req, res) => {
 exports.register = async (req, res) => {
 	let pwd = req.body.password;
     let enc_pwd = pwd ? md5(pwd) : null;
+    let user_type = req.body.userType;
     req.body.password = enc_pwd;
-    let NewUser = User();
-    let RegisterData = new NewUser(req.body)
-	RegisterData.save((err,result) => {
-        if (err) {
-            res.send({
-                status: false,
-                msg: "Server Query Error.",
-            })
-            return
-        }
-        if (result) {
-            let user = result;
-            jwt.sign(
-                { user },
-                constants.SECRET,
-                {
-                    expiresIn: constants.EXPIRES_IN
-                }, async (err, token) => {
-                    if (err) {
-                        res.send({
-                            status: false,
-                            err: err.message
-                        });
-                        return;
-                    } else {
-                        user.expiresIn = constants.EXPIRES_IN;
-                        user.token = token;
-                        let data = {
-                            token: token,
-                            status: true,
-                            msg: 'User loged in Successfully', 								
-                            user,
+    if(user_type == 1 || !user_type || user_type > 4){
+        res.send({
+            status: false,
+            msg: "You are trying to hack us. Which is impossible."
+        });
+        return
+    }else{
+        let NewUser = User();
+        let RegisterData = new NewUser(req.body)
+        RegisterData.save((err,result) => {
+            if (err) {
+                res.send({
+                    status: false,
+                    msg: "Server Query Error.",
+                })
+                return
+            }
+            if (result) {
+                let user = result;
+                jwt.sign(
+                    { user },
+                    constants.SECRET,
+                    {
+                        expiresIn: constants.EXPIRES_IN
+                    }, async (err, token) => {
+                        if (err) {
+                            res.send({
+                                status: false,
+                                err: err.message
+                            });
+                            return;
+                        } else {
+                            user.expiresIn = constants.EXPIRES_IN;
+                            user.token = token;
+                            let data = {
+                                token: token,
+                                status: true,
+                                msg: 'User loged in Successfully', 								
+                                user,
+                            }
+                            res.send(data);
+                            return;
                         }
-                        res.send(data);
-                        return;
                     }
-                }
-            );
-        } else {
-            res.send({
-                status: false,
-                msg: "User Not Registered.",
-            })
-            return
-        }
-    });
+                );
+            } else {
+                res.send({
+                    status: false,
+                    msg: "User Not Registered.",
+                })
+                return
+            }
+        });
+    }
 }
 
 /*****Reset Password*****/
