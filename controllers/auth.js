@@ -3,10 +3,10 @@ const jwt = require('jsonwebtoken');
 const generator = require('generate-password');
 const randtoken = require('rand-token');
 
-const { User } = require('../db/models/models');
+const { UserModel } = require('../db/models/models');
 
 const constants = require('../config/constants');
-
+const User = UserModel();
 let refreshTokens = {}
 
 /*****Check User Register Or Not*****/
@@ -14,7 +14,7 @@ exports.check = async (req, res) => {
 	let email = req.body.email_address;
 
 	//check for if email is already registered
-	User().findOne({email: email},(err,result) => {
+	User.findOne({email: email},(err,result) => {
         if (err) {
             res.send({
                 status: false,
@@ -50,7 +50,7 @@ exports.login = async (req, res) => {
     let device_token = req.body.device_token;
 
 	//check for if email is already registered
-	User().findOne({email: email}, (err,result) => {
+	User.findOne({email: email}, async (err,result) => {
         if (err) {
             res.send({
                 status: false,
@@ -60,7 +60,7 @@ exports.login = async (req, res) => {
         }
         if (result) {
             if (result.password == enc_pwd) {
-                User().findOneAndUpdate({ _id: result._id },{ device_token: device_token });
+                await User.findOneAndUpdate({ _id:result.id },{ $set:{ device_token: device_token?device_token:"" } });
                 let user = result;
                 jwt.sign(
                     { user },
@@ -78,9 +78,10 @@ exports.login = async (req, res) => {
                             user.expiresIn = constants.EXPIRES_IN;
                             user.token = token;
                             let refreshToken = randtoken.uid(256)
-						    refreshTokens[refreshToken] = user._id
+						    refreshTokens[refreshToken] = user.id
                             let data = {
                                 token: token,
+                                expiresIn: constants.EXPIRES_IN,
                                 refreshToken: refreshToken,
                                 status: true,
                                 msg: 'User loged in Successfully', 								
@@ -124,8 +125,7 @@ exports.register = async (req, res) => {
         });
         return
     }else{
-        let NewUser = User();
-        let RegisterData = new NewUser(req.body)
+        let RegisterData = new User(req.body)
         RegisterData.save((err,result) => {
             if (err) {
                 res.send({
@@ -151,8 +151,12 @@ exports.register = async (req, res) => {
                         } else {
                             user.expiresIn = constants.EXPIRES_IN;
                             user.token = token;
+                            let refreshToken = randtoken.uid(256)
+						    refreshTokens[refreshToken] = user.id
                             let data = {
                                 token: token,
+                                expiresIn: constants.EXPIRES_IN,
+                                refreshToken: refreshToken,
                                 status: true,
                                 msg: 'User loged in Successfully', 								
                                 user,
@@ -182,7 +186,7 @@ exports.resetPwd = async (req, res) => {
             numbers: true
         });
         let enc_pwd = md5(userPwd);
-		User().findOneAndUpdate({ email: email },{ password: enc_pwd },{new: true},(err,result)=>{
+		User.findOneAndUpdate({ email: email },{ $set:{ password: enc_pwd } },{new: true},(err,result)=>{
             if(err){
                 res.send({
                     status: false,
@@ -223,7 +227,7 @@ exports.refreshToken = async (req, res) => {
 	let user_id = req.body.user_id
 	let refreshToken = req.body.refreshToken
 	if ((refreshToken in refreshTokens) && (refreshTokens[refreshToken] == user_id)) {
-        User().findById(user_id,(err,result) => {
+        User.findById(user_id,(err,result) => {
             if(err){
                 res.send({
                     status: false,
