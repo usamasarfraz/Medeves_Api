@@ -11,7 +11,7 @@ let refreshTokens = {}
 
 /*****Check User Register Or Not*****/
 exports.check = async (req, res) => {
-	let email = req.body.email_address;
+	let email = req.body.email;
 
 	//check for if email is already registered
 	User.findOne({email: email},(err,result) => {
@@ -44,7 +44,7 @@ exports.check = async (req, res) => {
 
 /*****User Login*****/
 exports.login = async (req, res) => {
-	let email = req.body.email_address;
+	let email = req.body.email;
 	let pwd = req.body.password;
     let enc_pwd = pwd ? md5(pwd) : null;
     let device_token = req.body.device_token;
