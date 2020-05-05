@@ -280,7 +280,7 @@ exports.refreshToken = async (req, res) => {
 exports.logout = async (req, res) => {
 	let user_id = req.body.user._id
 	let refreshToken = req.body.refreshToken
-	if ((refreshToken in refreshTokens) && (refreshTokens[refreshToken] == user_id)) {
+	if (user_id) {
         User.findOneAndUpdate({ _id: user_id },{ $set:{ device_token: "" } },{new: true},(err,result)=>{
             if(err){
                 res.send({
