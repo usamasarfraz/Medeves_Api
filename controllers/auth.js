@@ -261,7 +261,7 @@ exports.refreshToken = async (req, res) => {
                     }
                 })
             }else{
-                return res.status(401).send({
+                return res.send({
                     status: false,
                     msg: 'Invalid User'
                 });
@@ -269,7 +269,7 @@ exports.refreshToken = async (req, res) => {
         })
 	}
 	else {
-		return res.status(401).send({
+		return res.send({
 			status: false,
 			msg: 'Invalid User'
 		});
