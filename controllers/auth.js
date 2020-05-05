@@ -208,7 +208,7 @@ exports.resetPwd = async (req, res) => {
             } else {
                 data = {
                     status: false,
-                    msg: "Invalid User", // Invalid User.
+                    msg: "Invalid User",
                 }
                 return res.send(data);
             }
@@ -216,7 +216,7 @@ exports.resetPwd = async (req, res) => {
 	} else {
 		data = {
 			status: false,
-			msg: "Invalid User", // Invalid User.
+			msg: "Invalid User",
 		}
 		return res.send(data);
 	}
@@ -262,7 +262,7 @@ exports.refreshToken = async (req, res) => {
                 })
             }else{
                 return res.status(401).send({
-                    success: false,
+                    status: false,
                     msg: 'Invalid User'
                 });
             }
@@ -270,7 +270,7 @@ exports.refreshToken = async (req, res) => {
 	}
 	else {
 		return res.status(401).send({
-			success: false,
+			status: false,
 			msg: 'Invalid User'
 		});
 	}
@@ -283,13 +283,13 @@ exports.logout = async (req, res) => {
 	if ((refreshToken in refreshTokens) && (refreshTokens[refreshToken] == user_id)) {
         delete refreshTokens[refreshToken];
         return res.send({
-			success: true,
+			status: true,
 			msg: 'User logged out'
 		});
 	}
 	else {
 		return res.status(401).send({
-			success: false,
+			status: false,
 			msg: 'Invalid User'
 		});
 	}

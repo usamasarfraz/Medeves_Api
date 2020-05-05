@@ -13,7 +13,7 @@ module.exports = (req, res, next) => {
                     success: false
                 };
                 return res.status(401).json({
-                    success: false,
+                    status: false,
                     msg: 'Failed to authenticate token.'
                 });
 
@@ -30,7 +30,7 @@ module.exports = (req, res, next) => {
                         success: false
                     };
                     return res.status(401).send({
-                        success: false,
+                        status: false,
                         msg: 'No User Found'
                     });
                 }
@@ -44,7 +44,7 @@ module.exports = (req, res, next) => {
             success: false
         };
         return res.status(401).send({
-            success: false,
+            status: false,
             msg: 'No token provided.'
         });
     }
