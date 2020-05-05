@@ -278,7 +278,7 @@ exports.refreshToken = async (req, res) => {
 
 /*****User Logout*****/
 exports.logout = async (req, res) => {
-	let user_id = req.body.user_id
+	let user_id = req.body.user._id
 	let refreshToken = req.body.refreshToken
 	if ((refreshToken in refreshTokens) && (refreshTokens[refreshToken] == user_id)) {
         delete refreshTokens[refreshToken];
