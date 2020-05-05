@@ -224,7 +224,7 @@ exports.resetPwd = async (req, res) => {
 
 /*****Refresh Token*****/
 exports.refreshToken = async (req, res) => {
-	let user_id = req.body.user_id
+	let user_id = req.body.user._id
 	let refreshToken = req.body.refreshToken
 	if ((refreshToken in refreshTokens) && (refreshTokens[refreshToken] == user_id)) {
         User.findById(user_id,(err,result) => {
@@ -249,6 +249,8 @@ exports.refreshToken = async (req, res) => {
                         user.token = token;
                         data = {
                             token: token,
+                            expiresIn: constants.EXPIRES_IN,
+                            refreshToken: refreshToken,
                             status: true,
                             msg: 'User loged in Successfully',								
                             user,
@@ -265,6 +267,25 @@ exports.refreshToken = async (req, res) => {
                 });
             }
         })
+	}
+	else {
+		return res.status(401).send({
+			success: false,
+			msg: 'Invalid User'
+		});
+	}
+}
+
+/*****User Logout*****/
+exports.logout = async (req, res) => {
+	let user_id = req.body.user_id
+	let refreshToken = req.body.refreshToken
+	if ((refreshToken in refreshTokens) && (refreshTokens[refreshToken] == user_id)) {
+        delete refreshTokens[refreshToken];
+        return res.send({
+			success: true,
+			msg: 'User logged out'
+		});
 	}
 	else {
 		return res.status(401).send({
