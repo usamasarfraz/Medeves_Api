@@ -281,11 +281,28 @@ exports.logout = async (req, res) => {
 	let user_id = req.body.user._id
 	let refreshToken = req.body.refreshToken
 	if ((refreshToken in refreshTokens) && (refreshTokens[refreshToken] == user_id)) {
-        delete refreshTokens[refreshToken];
-        return res.send({
-			status: true,
-			msg: 'User logged out'
-		});
+        User.findOneAndUpdate({ _id: user_id },{ $set:{ device_token: "" } },{new: true},(err,result)=>{
+            if(err){
+                res.send({
+                    status: false,
+                    msg: "Server Query Error.",
+                })
+                return
+            }
+            if (result) {
+                delete refreshTokens[refreshToken];
+                return res.send({
+                    status: true,
+                    msg: 'User logged out'
+                });
+            } else {
+                data = {
+                    status: false,
+                    msg: "Invalid User",
+                }
+                return res.send(data);
+            }
+        });
 	}
 	else {
 		return res.status(401).send({
