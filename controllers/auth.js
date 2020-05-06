@@ -62,6 +62,7 @@ exports.login = async (req, res) => {
             if (result.password == enc_pwd) {
                 await User.findOneAndUpdate({ _id:result.id },{ $set:{ device_token: device_token?device_token:"" } });
                 let user = result;
+                user.device_token = device_token;
                 jwt.sign(
                     { user },
                     constants.SECRET,
