@@ -7,5 +7,5 @@ module.exports = {
 	HOST: URL,
 	PORT: "",
 	SECRET: 'keepitsecretwithauthformedeves!@#',
-	EXPIRES_IN: '86400s',
+	EXPIRES_IN: '60s',
 };
