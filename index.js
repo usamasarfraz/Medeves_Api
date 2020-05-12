@@ -2,7 +2,7 @@ const express = require("express");
 const path = require("path");
 const app = express();
 const db = require('./db/db');
-const port = process.env.PORT || "3880";
+const port = process.env.PORT || "8080";
 
 app.use(express.json({ limit: "1gb" }));
 app.use(
@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // routes
 app.get("/", function(req, res) {
-	res.send("Express");
+	res.send("Express Updated");
 });
 
 require("./routes/index.js")(app);
