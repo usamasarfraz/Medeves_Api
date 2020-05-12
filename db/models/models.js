@@ -1,10 +1,14 @@
 const mongoose = require('mongoose');
-const { userSchema, adminSchema } = require('../schemas/schemas');
+const { userSchema, storeSchema, riderSchema } = require('../schemas/schemas');
 
 exports.UserModel = () => {
     return mongoose.model('user', userSchema());
 }
 
-exports.Admin = () => {
-    return mongoose.model('admin', adminSchema());
+exports.StoreModel = () => {
+    return mongoose.model('store', storeSchema());
+}
+
+exports.RiderModel = () => {
+    return mongoose.model('rider', riderSchema());
 }

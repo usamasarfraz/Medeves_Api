@@ -3,54 +3,77 @@ const jwt = require('jsonwebtoken');
 const generator = require('generate-password');
 const randtoken = require('rand-token');
 
-const { UserModel } = require('../db/models/models');
+const { UserModel, StoreModel, RiderModel } = require('../db/models/models');
 
 const constants = require('../config/constants');
 const User = UserModel();
-let refreshTokens = {}
+const Store = StoreModel();
+const Rider = RiderModel();
+let refreshTokens = {};
 
 /*****Check User Register Or Not*****/
 exports.check = async (req, res) => {
 	let email = req.body.email;
-
-	//check for if email is already registered
-	User.findOne({email: email},(err,result) => {
-        if (err) {
-            res.send({
-                status: false,
-                error: true,
-                msg: "Server Query Error.",
-            })
-            return
+    let foundData = (result) => {
+        res.send({
+            status: true,
+            error: false,
+            user_type: result.userType,
+            msg: "User Already Registered.",
+        })
+        return
+    }
+    let dataNotFound = () => {
+        res.send({
+            status: false,
+            error: false,
+            msg: "User Not Registered.",
+        })
+        return
+    }
+    //check for if email is already registered
+    let Model = User;
+    var user = await Model.findOne({email: email});
+    if(user){
+        foundData(user);
+    }else{
+        var store = await Store.findOne({email: email});
+        if(store){
+            foundData(store);
+        }else{
+            var rider = await Rider.findOne({email: email});
+            if(rider){
+                foundData(rider);
+            }else{
+                dataNotFound();
+            }
         }
-        if (result) {
-            res.send({
-                status: true,
-                error: false,
-                msg: "User Already Registered.",
-            })
-            return
-        } else {
-            res.send({
-                status: false,
-                error: false,
-                msg: "User Not Registered.",
-            })
-            return
-        }
-    });
+    }
 }
 
 
 /*****User Login*****/
 exports.login = async (req, res) => {
 	let email = req.body.email;
-	let pwd = req.body.password;
+    let pwd = req.body.password;
+    let user_type = req.body.userType;
     let enc_pwd = pwd ? md5(pwd) : null;
     let device_token = req.body.device_token;
 
-	//check for if email is already registered
-	User.findOne({email: email}, async (err,result) => {
+    //check for if email is already registered
+        let Model = User;
+        switch (user_type) {
+            case 2:
+                Model = User;
+            break;
+            case 3:
+                Model = Store;
+            break;
+            case 4:
+                Model = Rider;
+            break;
+        }
+        Model.findOne({email: email}, async (err,result) => {
         if (err) {
             res.send({
                 status: false,
@@ -126,7 +149,19 @@ exports.register = async (req, res) => {
         });
         return
     }else{
-        let RegisterData = new User(req.body)
+        let Model = User;
+        switch (user_type) {
+            case 2:
+                Model = User;
+            break;
+            case 3:
+                Model = Store;
+            break;
+            case 4:
+                Model = Rider;
+            break;
+        }
+        let RegisterData = new Model(req.body);
         RegisterData.save((err,result) => {
             if (err) {
                 res.send({
@@ -225,10 +260,23 @@ exports.resetPwd = async (req, res) => {
 
 /*****Refresh Token*****/
 exports.refreshToken = async (req, res) => {
-	let user_id = req.body.user._id
+    let user_id = req.body.user._id
+    let user_type = req.body.user.userType
 	let refreshToken = req.body.refreshToken
 	if ((refreshToken in refreshTokens) && (refreshTokens[refreshToken] == user_id)) {
-        User.findById(user_id,(err,result) => {
+        let Model = User;
+        switch (user_type) {
+            case 2:
+                Model = User;
+            break;
+            case 3:
+                Model = Store;
+            break;
+            case 4:
+                Model = Rider;
+            break;
+        }
+        Model.findById(user_id,(err,result) => {
             if(err){
                 res.send({
                     status: false,
@@ -280,9 +328,22 @@ exports.refreshToken = async (req, res) => {
 /*****User Logout*****/
 exports.logout = async (req, res) => {
 	let user_id = req.body.user._id
+    let user_type = req.body.user.userType
 	let refreshToken = req.body.refreshToken
 	if (user_id) {
-        User.findOneAndUpdate({ _id: user_id },{ $set:{ device_token: "" } },{new: true},(err,result)=>{
+        let Model = User;
+        switch (user_type) {
+            case 2:
+                Model = User;
+            break;
+            case 3:
+                Model = Store;
+            break;
+            case 4:
+                Model = Rider;
+            break;
+        }
+        Model.findOneAndUpdate({ _id: user_id },{ $set:{ device_token: "" } },{new: true},(err,result)=>{
             if(err){
                 res.send({
                     status: false,
