@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // routes
 app.get("/", function(req, res) {
-	res.send("Express");
+	res.send("Express Updated");
 });
 
 require("./routes/index.js")(app);
