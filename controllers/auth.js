@@ -3,12 +3,9 @@ const jwt = require('jsonwebtoken');
 const generator = require('generate-password');
 const randtoken = require('rand-token');
 
-const { UserModel, StoreModel, RiderModel } = require('../db/models/models');
-
+const { User, Store, Rider } = require('../db/models/index');
+const { upload } = require('../helpers/multer');
 const constants = require('../config/constants');
-const User = UserModel();
-const Store = StoreModel();
-const Rider = RiderModel();
 let refreshTokens = {};
 
 /*****Check User Register Or Not*****/
@@ -138,79 +135,89 @@ exports.login = async (req, res) => {
 
 /*****User Register*****/
 exports.register = async (req, res) => {
-	let pwd = req.body.password;
-    let enc_pwd = pwd ? md5(pwd) : null;
-    let user_type = req.body.userType;
-    req.body.password = enc_pwd;
-    if(user_type == 1 || !user_type || user_type > 4){
-        res.send({
+    upload(req, res, (err) => {
+        let pwd = req.body.password;
+        let enc_pwd = pwd ? md5(pwd) : null;
+        let user_type = Number(req.body.userType);
+        req.body.password = enc_pwd;
+        if(err){
+          res.send({
             status: false,
-            msg: "You are trying to hack us. Which is impossible."
-        });
-        return
-    }else{
-        let Model = User;
-        switch (user_type) {
-            case 2:
-                Model = User;
-            break;
-            case 3:
-                Model = Store;
-            break;
-            case 4:
-                Model = Rider;
-            break;
-        }
-        let RegisterData = new Model(req.body);
-        RegisterData.save((err,result) => {
-            if (err) {
+            msg: err.message
+          });
+        } else {
+            if(user_type == 1 || !user_type || user_type > 4){
                 res.send({
                     status: false,
-                    msg: "Server Query Error.",
-                })
+                    msg: "You are trying to hack us. Which is impossible."
+                });
                 return
-            }
-            if (result) {
-                let user = result;
-                jwt.sign(
-                    { user },
-                    constants.SECRET,
-                    {
-                        expiresIn: constants.EXPIRES_IN
-                    }, async (err, token) => {
-                        if (err) {
-                            res.send({
-                                status: false,
-                                err: err.message
-                            });
-                            return;
-                        } else {
-                            user.expiresIn = constants.EXPIRES_IN;
-                            user.token = token;
-                            let refreshToken = randtoken.uid(256)
-						    refreshTokens[refreshToken] = user.id
-                            let data = {
-                                token: token,
-                                expiresIn: constants.EXPIRES_IN,
-                                refreshToken: refreshToken,
-                                status: true,
-                                msg: 'User loged in Successfully', 								
-                                user,
-                            }
-                            res.send(data);
-                            return;
-                        }
+            }else{
+                let Model = User;
+                switch (user_type) {
+                    case 2:
+                        Model = User;
+                    break;
+                    case 3:
+                        Model = Store;
+                    break;
+                    case 4:
+                        Model = Rider;
+                    break;
+                }
+                req.body.images = req.files;
+                let RegisterData = new Model(req.body);
+                RegisterData.save((err,result) => {
+                    if (err) {
+                        res.send({
+                            status: false,
+                            msg: "Server Query Error.",
+                        })
+                        return
                     }
-                );
-            } else {
-                res.send({
-                    status: false,
-                    msg: "User Not Registered.",
-                })
-                return
+                    if (result) {
+                        let user = result;
+                        jwt.sign(
+                            { user },
+                            constants.SECRET,
+                            {
+                                expiresIn: constants.EXPIRES_IN
+                            }, async (err, token) => {
+                                if (err) {
+                                    res.send({
+                                        status: false,
+                                        err: err.message
+                                    });
+                                    return;
+                                } else {
+                                    user.expiresIn = constants.EXPIRES_IN;
+                                    user.token = token;
+                                    let refreshToken = randtoken.uid(256)
+                                    refreshTokens[refreshToken] = user.id
+                                    let data = {
+                                        token: token,
+                                        expiresIn: constants.EXPIRES_IN,
+                                        refreshToken: refreshToken,
+                                        status: true,
+                                        msg: 'User loged in Successfully', 								
+                                        user,
+                                    }
+                                    res.send(data);
+                                    return;
+                                }
+                            }
+                        );
+                    } else {
+                        res.send({
+                            status: false,
+                            msg: "User Not Registered.",
+                        })
+                        return
+                    }
+                });
             }
-        });
-    }
+        }
+    })
 }
 
 /*****Reset Password*****/
