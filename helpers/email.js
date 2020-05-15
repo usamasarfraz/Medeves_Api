@@ -1,36 +1,40 @@
-var nodemailer = require('nodemailer');
-var smtpTransport = require('nodemailer-smtp-transport');
-var constants = require('../config/constants');
+const nodemailer = require('nodemailer');
+const Constants = require('../config/constants');
+const { google } = require("googleapis");
+const OAuth2 = google.auth.OAuth2;
 
-var transporter = nodemailer.createTransport(smtpTransport({
-	host: 'smtp.gmail.com',
-	port: 587,
-	// secure: false,
-	// requireTLS: true,
-	// secureConnection: true,
-	// logger: true,
-	// debug: true,
+const oauth2Client = new OAuth2(
+	Constants.SMTP_CLIENT_ID, // ClientID
+	Constants.SMTP_CLIENT_SECRET, // Client Secret
+	Constants.SMTP_REDIRECT_URL // Redirect URL
+);
+oauth2Client.setCredentials({
+	refresh_token: Constants.SMTP_REFRESH_TOKEN
+});
+const accessToken = oauth2Client.getAccessToken()
 
-	connectionTimeout: 600000,
-	greetingTimeout: 300000,
-
+const smtpTransport = nodemailer.createTransport({
+	service: Constants.SMTP_SERVICE,
 	auth: {
-		user: constants.SMTP_USERNAME,
-		pass: constants.SMTP_PASSWORD
+		type: Constants.SMTP_TYPE,
+		user: Constants.SMTP_FROM_EMAIL, 
+		clientId: Constants.SMTP_CLIENT_ID,
+		clientSecret: Constants.SMTP_CLIENT_SECRET,
+		refreshToken: Constants.SMTP_REFRESH_TOKEN,
+		accessToken: accessToken
 	}
-}));
+});
 
 
 
 exports.sendEmail = (subject, message, to, callback) => {
 	let cb = callback;
-	subject = `${constants.SMTP_COMMON_SUBJECT} ${subject}`
-
+	subject = `${Constants.APP_TITLE} ${subject}`
 	let mailOptions = {
-		from: constants.SMTP_FROM_EMAIL,
+		from: Constants.SMTP_FROM_EMAIL,
 		to: to,
 		subject: subject,
 		html: message
 	};
-	transporter.sendMail(mailOptions, cb);
+	smtpTransport.sendMail(mailOptions, cb);
 }

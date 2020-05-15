@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, "./")));
 
 // routes
 app.get("/", function(req, res) {
-	res.send("Express Updated");
+	res.send("Express");
 });
 
 require("./routes/index.js")(app);

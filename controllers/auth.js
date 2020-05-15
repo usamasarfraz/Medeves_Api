@@ -2,7 +2,7 @@ const md5 = require('md5');
 const jwt = require('jsonwebtoken');
 const generator = require('generate-password');
 const randtoken = require('rand-token');
-
+const { sendEmail } = require('../helpers/email');
 const { User, Store, Rider } = require('../db/models/index');
 const { upload } = require('../helpers/multer');
 const constants = require('../config/constants');
@@ -222,14 +222,27 @@ exports.register = async (req, res) => {
 
 /*****Reset Password*****/
 exports.resetPwd = async (req, res) => {
-	var email = req.body.email_address;
+	let email = req.body.email;
+	let user_type = req.body.userType;
 	if (email) {
         let userPwd = generator.generate({
             length: 10,
             numbers: true
         });
         let enc_pwd = md5(userPwd);
-		User.findOneAndUpdate({ email: email },{ $set:{ password: enc_pwd } },{new: true},(err,result)=>{
+        let Model = User;
+        switch (user_type) {
+            case 2:
+                Model = User;
+            break;
+            case 3:
+                Model = Store;
+            break;
+            case 4:
+                Model = Rider;
+            break;
+        }
+		Model.findOneAndUpdate({ email: email },{ $set:{ password: enc_pwd } },{new: true},(err,result)=>{
             if(err){
                 res.send({
                     status: false,
@@ -238,15 +251,23 @@ exports.resetPwd = async (req, res) => {
                 return
             }
             if (result) {
-                var html = `Your Login password changed successfully. Your new password is ${userPwd} `;
+                let html = `Your Login password changed successfully. Your new password is ${userPwd}.`;
     
-                sendEmail("User password changed successfully", html, result.email)
-    
-                data = {
-                    status: true,
-                    msg: "Password changed successfully.Please check your email.",
-                };
-                return res.send(data);
+                sendEmail("User password changed successfully", html, result.email,(err)=>{
+                    if (err) {
+                        data = {
+                            status: false,
+                            msg: "Password not changed.Please try again.",
+                        };
+                        return res.send(data);
+                    }else{
+                        data = {
+                            status: true,
+                            msg: "Password changed successfully.Please check your email or see in spam.",
+                        };
+                        return res.send(data);
+                    }
+                });
     
             } else {
                 data = {
