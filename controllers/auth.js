@@ -5,6 +5,7 @@ const randtoken = require('rand-token');
 const { sendEmail } = require('../helpers/email');
 const { User, Store, Rider } = require('../db/models/index');
 const { upload } = require('../helpers/multer');
+const { cloudinary } = require('../helpers/cloudinary');
 const constants = require('../config/constants');
 let refreshTokens = {};
 
@@ -135,7 +136,7 @@ exports.login = async (req, res) => {
 
 /*****User Register*****/
 exports.register = async (req, res) => {
-    upload(req, res, (err) => {
+    upload(req, res, async (err) => {
         let pwd = req.body.password;
         let enc_pwd = pwd ? md5(pwd) : null;
         let user_type = Number(req.body.userType);
@@ -165,7 +166,9 @@ exports.register = async (req, res) => {
                         Model = Rider;
                     break;
                 }
-                req.body.images = req.files;
+                let data = await cloudinary(req.files);
+                
+                req.body.images = data;
                 let RegisterData = new Model(req.body);
                 RegisterData.save((err,result) => {
                     if (err) {
