@@ -1,5 +1,14 @@
 const express = require("express");
-const { User, Store, Rider, Order } = require("../db/models/index");
+const ObjectId = require("mongoose").Types.ObjectId;
+const md5 = require("md5");
+const {
+  User,
+  Store,
+  Rider,
+  Order,
+  FavStore,
+  ClientAddress,
+} = require("../db/models/index");
 const { upload } = require("../helpers/multer");
 const { cloudinary } = require("../helpers/cloudinary");
 const router = express.Router();
@@ -87,8 +96,44 @@ router.put("/decline_store", (req, res) => {
 router.get("/get_stores_for_client/:lat/:long", (req, res) => {
   let lat = req.params.lat;
   let long = req.params.long;
+  let client = req.decoded.user._id;
   let query = { verification: "APPROVED" };
-  Store.find(query, (err, result) => {
+  Store.aggregate([
+    {
+      $lookup: {
+        from: "fav_stores",
+        localField: "_id.toHexString()",
+        foreignField: "stores.toHexString()",
+        as: "favorite",
+      },
+    },
+    {
+      $match: {
+        verification: "APPROVED",
+      },
+    },
+    {
+      $addFields: {
+        storeId: { $toString: "$_id" },
+      },
+    },
+    {
+      $addFields: {
+        favorite: {
+          $filter: {
+            input: "$favorite",
+            as: "favorite",
+            cond: {
+              $and: [
+                { $eq: ["$$favorite.client", client] },
+                { $eq: ["$$favorite.store", "$storeId"] },
+              ],
+            },
+          },
+        },
+      },
+    },
+  ]).exec((err, result) => {
     if (err) {
       res.send({
         status: false,
@@ -212,6 +257,304 @@ router.put("/accept_order_by_store", (req, res) => {
 
 router.delete("/reject_order_by_store/:id", (req, res) => {
   Order.findByIdAndRemove(req.params.id, (err, result) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: "Server Query Error.",
+      });
+      return;
+    }
+    if (result) {
+      res.send({
+        status: true,
+        result,
+      });
+      return;
+    }
+  });
+});
+
+router.put("/fav_store_by_client", (req, res) => {
+  let fav = req.body.fav;
+  let store = req.body.store;
+  let client = req.decoded.user._id;
+  FavStore.findOneAndUpdate(
+    { store: store, client: client },
+    { store: store, client: client, fav: fav },
+    { upsert: true, new: true },
+    (err, result) => {
+      if (err) {
+        res.send({
+          status: false,
+          msg: "Server Query Error.",
+        });
+        return;
+      }
+      if (result) {
+        res.send({
+          status: true,
+          result,
+        });
+        return;
+      }
+    }
+  );
+});
+
+router.get("/get_favorite_stores_for_client", (req, res) => {
+  let client = req.decoded.user._id;
+  FavStore.aggregate([
+    {
+      $lookup: {
+        from: "stores",
+        localField: "store.toHexString()",
+        foreignField: "_id.toHexString()",
+        as: "storeData",
+      },
+    },
+    {
+      $match: {
+        client: client,
+        fav: true,
+      },
+    },
+    {
+      $addFields: {
+        storeData: {
+          $filter: {
+            input: "$storeData",
+            as: "storeData",
+            cond: {
+              $eq: [{ $toString: "$$storeData._id" }, "$store"],
+            },
+          },
+        },
+      },
+    },
+    {
+      $unwind: "$storeData",
+    },
+    {
+      $project: {
+        _id: "$storeData._id",
+        email: "$storeData.email",
+        firstName: "$storeData.firstName",
+        lastName: "$storeData.lastName",
+        phone: "$storeData.phone",
+        userType: "$storeData.userType",
+        verification: "$storeData.verification",
+        status: "$storeData.status",
+        store_name: "$storeData.store_name",
+        cnic: "$storeData.cnic",
+        city: "$storeData.city",
+        address: "$storeData.address",
+        certificate: "$storeData.certificate",
+        images: "$storeData.images",
+        latitude: "$storeData.latitude",
+        longitude: "$storeData.longitude",
+        device_token: "$storeData.device_token",
+        favorite: [{ client: "$client", store: "$store", fav: "$fav" }],
+      },
+    },
+  ]).exec((err, result) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: "Server Query Error.",
+      });
+      return;
+    }
+    if (result) {
+      res.send({
+        status: true,
+        result,
+      });
+      return;
+    }
+  });
+});
+
+router.get("/get_past_orders", (req, res) => {
+  let id = req.decoded.user._id;
+  Order.aggregate([
+    {
+      $lookup: {
+        from: "stores",
+        localField: "store.toHexString()",
+        foreignField: "_id.toHexString()",
+        as: "storeData",
+      },
+    },
+    {
+      $match: {
+        client: id,
+        status: "COMPLETED",
+      },
+    },
+    {
+      $addFields: {
+        storeData: {
+          $filter: {
+            input: "$storeData",
+            as: "storeData",
+            cond: {
+              $eq: [{ $toString: "$$storeData._id" }, "$store"],
+            },
+          },
+        },
+      },
+    },
+    {
+      $unwind: "$storeData",
+    },
+    {
+      $addFields: {
+        store_name: "$storeData.store_name",
+      },
+    },
+  ]).exec((err, result) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: "Server Query Error.",
+      });
+      return;
+    }
+    if (result) {
+      res.send({
+        status: true,
+        result,
+      });
+      return;
+    }
+  });
+});
+
+router.put("/update_client_info", (req, res) => {
+  let client = req.decoded.user._id;
+  User.findByIdAndUpdate(client, req.body, { new: true }, (err, result) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: "Server Query Error.",
+      });
+      return;
+    }
+    if (result) {
+      res.send({
+        status: true,
+        user: result,
+      });
+      return;
+    }
+  });
+});
+
+router.put("/update_client_password", (req, res) => {
+  let client = req.decoded.user._id;
+  let pwd = req.body.password;
+  let enc_pwd = pwd ? md5(pwd) : null;
+  let new_pwd = req.body.newPassword;
+  let new_enc_pwd = new_pwd ? md5(new_pwd) : null;
+  let query = { _id: client, password: enc_pwd };
+  User.findOneAndUpdate(
+    query,
+    { password: new_enc_pwd },
+    { new: true },
+    (err, result) => {
+      if (err) {
+        res.send({
+          status: false,
+          msg: "Server Query Error.",
+        });
+        return;
+      }
+      if (result) {
+        res.send({
+          status: true,
+          msg: "Password Changed Successfully.",
+        });
+        return;
+      } else {
+        res.send({
+          status: false,
+          msg: "Incorrect Password.",
+        });
+        return;
+      }
+    }
+  );
+});
+
+router.get("/get_client_addresses", (req, res) => {
+  let client = req.decoded.user._id;
+  let query = { client: client };
+  ClientAddress.find(query, (err, result) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: "Server Query Error.",
+      });
+      return;
+    }
+    if (result) {
+      res.send({
+        status: true,
+        result,
+      });
+      return;
+    }
+  });
+});
+
+router.post("/add_client_address", (req, res) => {
+  let RegisterData = new ClientAddress(req.body);
+  RegisterData.save((err, result) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: "Server Query Error.",
+      });
+      return;
+    }
+    if (result) {
+      res.send({
+        status: true,
+        msg: "Your Address Added Successfully.",
+        result,
+      });
+      return;
+    }
+  });
+});
+
+router.put("/update_client_address", (req, res) => {
+  let id = req.body._id;
+  ClientAddress.findByIdAndUpdate(
+    id,
+    req.body,
+    { new: true },
+    (err, result) => {
+      if (err) {
+        res.send({
+          status: false,
+          msg: "Server Query Error.",
+        });
+        return;
+      }
+      if (result) {
+        res.send({
+          status: true,
+          result,
+        });
+        return;
+      }
+    }
+  );
+});
+
+router.delete("/remove_client_address/:id", (req, res) => {
+  ClientAddress.findByIdAndRemove(req.params.id, (err, result) => {
     if (err) {
       res.send({
         status: false,

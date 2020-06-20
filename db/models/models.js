@@ -4,6 +4,8 @@ const {
   storeSchema,
   riderSchema,
   orderSchema,
+  favStoreSchema,
+  clientAddressSchema,
 } = require("../schemas/schemas");
 
 exports.UserModel = () => {
@@ -20,4 +22,12 @@ exports.RiderModel = () => {
 
 exports.OrderModel = () => {
   return mongoose.model("order", orderSchema());
+};
+
+exports.FavStoreModel = () => {
+  return mongoose.model("fav_store", favStoreSchema());
+};
+
+exports.ClientAddressModel = () => {
+  return mongoose.model("client_address", clientAddressSchema());
 };

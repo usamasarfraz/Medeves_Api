@@ -171,7 +171,7 @@ exports.orderSchema = () => {
         type: String,
       },
       user_name: {
-        type: String
+        type: String,
       },
       medicines: {
         type: Array,
@@ -187,9 +187,59 @@ exports.orderSchema = () => {
       },
       status: {
         type: String,
-        enum: ["PENDING","ACCEPTED","ON_THE_WAY","REJECTED"],
-        default: "PENDING"
-      }
+        enum: ["PENDING", "ACCEPTED", "ON_THE_WAY", "REJECTED", "COMPLETED"],
+        default: "PENDING",
+      },
+    },
+    {
+      timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+    }
+  );
+};
+
+exports.favStoreSchema = () => {
+  return mongoose.Schema(
+    {
+      store: {
+        type: String,
+      },
+      client: {
+        type: String,
+      },
+      fav: {
+        type: Boolean,
+      },
+    },
+    {
+      timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+    }
+  );
+};
+
+exports.clientAddressSchema = () => {
+  return mongoose.Schema(
+    {
+      client: {
+        type: String,
+      },
+      building: {
+        type: String,
+      },
+      street: {
+        type: String,
+      },
+      area: {
+        type: String,
+      },
+      riderNote: {
+        type: String,
+      },
+      latitude: {
+        type: String,
+      },
+      longitude: {
+        type: String,
+      },
     },
     {
       timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
