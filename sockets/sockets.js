@@ -1,8 +1,12 @@
 // Libraries
-var socket = require("socket.io");
-var jwt = require("jsonwebtoken");
-
-var sockets = {};
+const socket = require("socket.io");
+const jwt = require("jsonwebtoken");
+const {
+  UpdateRider,
+  CreateRiderNotification,
+} = require("../helpers/serviceHelper");
+const sendNotification = require("../helpers/PushNotification");
+const sockets = {};
 let io;
 
 // verify token
@@ -125,6 +129,25 @@ sockets.listen = function (server) {
       socket.on("placeOrder", (data) => {
         console.log(data);
         socket.broadcast.to(data.store).emit("order_for_store", data);
+      });
+      socket.on("riderCurrentLocation", async (data) => {
+        let updatedData = await UpdateRider(user_id, {
+          status: data.status,
+          currentLocation: data.data,
+        });
+        socket.emit("riderLocationUpdated", { user: updatedData });
+      });
+      socket.on("sendOrderToRider", async (data) => {
+        let title = "you got an order";
+        let body = `${data.rider.firstName} ${data.rider.firstName} you have to deliver this order on ${data.order.address}.`;
+        let token = data.rider.device_token;
+        let notification = await CreateRiderNotification({
+          title: `${data.rider.firstName} ${data.rider.firstName} Deliver your order on ${data.order.address}.`,
+          rider: data.rider._id,
+          order: data.order._id,
+        });
+        await sendNotification(title, body, token);
+        socket.broadcast.to(data.rider._id).emit("notifyTheRider", notification);
       });
     } else {
       console.log("web socket");

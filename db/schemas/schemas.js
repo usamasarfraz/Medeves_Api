@@ -124,7 +124,7 @@ exports.riderSchema = () => {
       },
       status: {
         type: String,
-        enum: ["LOGGED_IN", "LOGGED_OFF"],
+        enum: ["LOGGED_IN", "LOGGED_OFF", "ONLINE"],
         default: "LOGGED_IN",
       },
       rider_name: {
@@ -145,11 +145,9 @@ exports.riderSchema = () => {
       images: {
         type: Array,
       },
-      latitude: {
-        type: String,
-      },
-      longitude: {
-        type: String,
+      currentLocation: {
+        type: [Number],
+        createIndexes: '2d'
       },
       device_token: {
         type: String,
@@ -168,6 +166,9 @@ exports.orderSchema = () => {
         type: String,
       },
       client: {
+        type: String,
+      },
+      rider: {
         type: String,
       },
       user_name: {
@@ -239,6 +240,29 @@ exports.clientAddressSchema = () => {
       },
       longitude: {
         type: String,
+      },
+    },
+    {
+      timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+    }
+  );
+};
+
+exports.riderNotificationSchema = () => {
+  return mongoose.Schema(
+    {
+      title: {
+        type: String,
+      },
+      rider: {
+        type: String,
+      },
+      order: {
+        type: String,
+      },
+      read: {
+        type: Boolean,
+        default: false,
       },
     },
     {

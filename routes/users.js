@@ -8,6 +8,7 @@ const {
   Order,
   FavStore,
   ClientAddress,
+  RiderNotification,
 } = require("../db/models/index");
 const { upload } = require("../helpers/multer");
 const { cloudinary } = require("../helpers/cloudinary");
@@ -232,6 +233,12 @@ router.get("/get_client_detail/:id", (req, res) => {
 });
 
 router.put("/accept_order_by_store", (req, res) => {
+  let coords = [];
+  let longitude = parseFloat(req.decoded.user.longitude);
+  let latitude = parseFloat(req.decoded.user.latitude);
+  coords[0] = longitude;
+  coords[1] = latitude;
+
   Order.findByIdAndUpdate(
     req.body.key,
     { status: "ACCEPTED" },
@@ -245,11 +252,26 @@ router.put("/accept_order_by_store", (req, res) => {
         return;
       }
       if (result) {
-        res.send({
-          status: true,
-          result,
-        });
-        return;
+        Rider.find(
+          {
+            currentLocation: {
+              $near: coords,
+              $maxDistance: 5,
+            },
+            verification: "APPROVED",
+            status: "LOGGED_IN",
+          },
+          (err, riderData) => {
+            if (riderData) {
+              res.send({
+                status: true,
+                result,
+                riderData,
+              });
+              return;
+            }
+          }
+        );
       }
     }
   );
@@ -555,6 +577,208 @@ router.put("/update_client_address", (req, res) => {
 
 router.delete("/remove_client_address/:id", (req, res) => {
   ClientAddress.findByIdAndRemove(req.params.id, (err, result) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: "Server Query Error.",
+      });
+      return;
+    }
+    if (result) {
+      res.send({
+        status: true,
+        result,
+      });
+      return;
+    }
+  });
+});
+
+router.get("/get_riders_for_admin/:type", (req, res) => {
+  let type = Number(req.params.type);
+  let query = {};
+  switch (type) {
+    case 1:
+      query = { verification: "PENDING" };
+      break;
+    case 2:
+      query = { verification: "APPROVED" };
+      break;
+    case 3:
+      query = { verification: "DECLINED" };
+      break;
+  }
+  Rider.find(query, (err, result) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: "Server Query Error.",
+      });
+      return;
+    }
+    if (result) {
+      res.send({
+        status: true,
+        result,
+      });
+      return;
+    }
+  });
+});
+
+router.put("/approve_rider", (req, res) => {
+  Rider.findByIdAndUpdate(
+    req.body.key,
+    { verification: "APPROVED" },
+    { new: true },
+    (err, result) => {
+      if (err) {
+        res.send({
+          status: false,
+          msg: "Server Query Error.",
+        });
+        return;
+      }
+      if (result) {
+        res.send({
+          status: true,
+          result,
+        });
+        return;
+      }
+    }
+  );
+});
+
+router.put("/decline_rider", (req, res) => {
+  Rider.findByIdAndUpdate(
+    req.body.key,
+    { verification: "DECLINED" },
+    { new: true },
+    (err, result) => {
+      if (err) {
+        res.send({
+          status: false,
+          msg: "Server Query Error.",
+        });
+        return;
+      }
+      if (result) {
+        res.send({
+          status: true,
+          result,
+        });
+        return;
+      }
+    }
+  );
+});
+
+router.get("/get_notifications_for_rider", (req, res) => {
+  let query = { rider: req.decoded.user._id };
+  RiderNotification.find(query, (err, result) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: "Server Query Error.",
+      });
+      return;
+    }
+    if (result) {
+      res.send({
+        status: true,
+        result,
+      });
+      return;
+    }
+  });
+});
+
+router.get("/get_number_of_unread_notifications_for_rider", (req, res) => {
+  let query = { rider: req.decoded.user._id, read: false };
+  RiderNotification.find(query, (err, result) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: "Server Query Error.",
+      });
+      return;
+    }
+    if (result) {
+      res.send({
+        status: true,
+        result,
+      });
+      return;
+    }
+  });
+});
+
+router.post("/get_order_detail_for_rider", async (req, res) => {
+  let rider = req.decoded.user._id;
+  let order = ObjectId(req.body.order);
+  let riderNotificationId = req.body._id;
+  await RiderNotification.findByIdAndUpdate(riderNotificationId,{read: true});
+  Order.aggregate([
+    {
+      $lookup: {
+        from: "stores",
+        localField: "store.toHexString()",
+        foreignField: "_id.toHexString()",
+        as: "storeData",
+      },
+    },
+    {
+      $match: {
+        _id: order
+      },
+    },
+    {
+      $addFields: {
+        storeData: {
+          $filter: {
+            input: "$storeData",
+            as: "storeData",
+            cond: {
+              $eq: [{ $toString: "$$storeData._id" }, "$store"],
+            },
+          },
+        },
+      },
+    },
+    {
+      $unwind: "$storeData",
+    },
+    {
+      $addFields: {
+        store_name: "$storeData.store_name",
+        store_phone: "$storeData.phone",
+        store_address: "$storeData.address",
+        store_latitude: "$storeData.latitude",
+        store_longitude: "$storeData.longitude",
+      },
+    },
+  ]).exec((err, result) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: "Server Query Error.",
+      });
+      return;
+    }
+    if (result) {
+      res.send({
+        status: true,
+        result,
+      });
+      return;
+    }
+  });
+});
+
+router.get("/get_accepted_orders_for_store", (req, res) => {
+  let query = { store: req.decoded.user._id, status: "ACCEPTED" };
+  Order.find(query, (err, result) => {
     if (err) {
       res.send({
         status: false,
