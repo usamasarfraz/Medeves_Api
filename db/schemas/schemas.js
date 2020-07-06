@@ -270,3 +270,31 @@ exports.riderNotificationSchema = () => {
     }
   );
 };
+
+exports.storeAccountDetailSchema = () => {
+  return mongoose.Schema(
+    {
+      store: {
+        type: String,
+      },
+      totalWithdraw: {
+        type: Number,
+      },
+      pendingAmount: {
+        type: Number,
+      },
+      receivedRequests: {
+        type: Number,
+      },
+      ordersCompleted: {
+        type: Number,
+      },
+      personalBalance: {
+        type: Number,
+      },
+    },
+    {
+      timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+    }
+  );
+};

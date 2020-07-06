@@ -6,6 +6,7 @@ const {
   FavStoreModel,
   ClientAddressModel,
   RiderNotificationModel,
+  StoreAccountDetailModel,
 } = require("./models");
 
 exports.User = UserModel();
@@ -15,3 +16,4 @@ exports.Order = OrderModel();
 exports.FavStore = FavStoreModel();
 exports.ClientAddress = ClientAddressModel();
 exports.RiderNotification = RiderNotificationModel();
+exports.StoreAccountDetail = StoreAccountDetailModel();

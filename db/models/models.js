@@ -7,6 +7,7 @@ const {
   favStoreSchema,
   clientAddressSchema,
   riderNotificationSchema,
+  storeAccountDetailSchema,
 } = require("../schemas/schemas");
 
 exports.UserModel = () => {
@@ -35,4 +36,8 @@ exports.ClientAddressModel = () => {
 
 exports.RiderNotificationModel = () => {
   return mongoose.model("rider_notification", riderNotificationSchema());
+};
+
+exports.StoreAccountDetailModel = () => {
+  return mongoose.model("store_account_detail", storeAccountDetailSchema());
 };

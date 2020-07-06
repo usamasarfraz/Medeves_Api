@@ -9,6 +9,7 @@ const {
   FavStore,
   ClientAddress,
   RiderNotification,
+  StoreAccountDetail,
 } = require("../db/models/index");
 const { upload } = require("../helpers/multer");
 const { cloudinary } = require("../helpers/cloudinary");
@@ -454,7 +455,11 @@ router.get("/get_past_orders", (req, res) => {
 
 router.put("/update_client_info", (req, res) => {
   let client = req.decoded.user._id;
-  User.findByIdAndUpdate(client, req.body, { new: true }, (err, result) => {
+  let Model = User;
+  if(req.body.userType == 4){
+    Model = Rider;
+  }
+  Model.findByIdAndUpdate(client, req.body, { new: true }, (err, result) => {
     if (err) {
       res.send({
         status: false,
@@ -479,7 +484,11 @@ router.put("/update_client_password", (req, res) => {
   let new_pwd = req.body.newPassword;
   let new_enc_pwd = new_pwd ? md5(new_pwd) : null;
   let query = { _id: client, password: enc_pwd };
-  User.findOneAndUpdate(
+  let Model = User;
+  if(req.body.userType == 4){
+    Model = Rider;
+  }
+  Model.findOneAndUpdate(
     query,
     { password: new_enc_pwd },
     { new: true },
@@ -718,7 +727,9 @@ router.post("/get_order_detail_for_rider", async (req, res) => {
   let rider = req.decoded.user._id;
   let order = ObjectId(req.body.order);
   let riderNotificationId = req.body._id;
-  await RiderNotification.findByIdAndUpdate(riderNotificationId,{read: true});
+  await RiderNotification.findByIdAndUpdate(riderNotificationId, {
+    read: true,
+  });
   Order.aggregate([
     {
       $lookup: {
@@ -730,7 +741,7 @@ router.post("/get_order_detail_for_rider", async (req, res) => {
     },
     {
       $match: {
-        _id: order
+        _id: order,
       },
     },
     {
@@ -778,6 +789,174 @@ router.post("/get_order_detail_for_rider", async (req, res) => {
 
 router.get("/get_accepted_orders_for_store", (req, res) => {
   let query = { store: req.decoded.user._id, status: "ACCEPTED" };
+  Order.find(query, (err, result) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: "Server Query Error.",
+      });
+      return;
+    }
+    if (result) {
+      res.send({
+        status: true,
+        result,
+      });
+      return;
+    }
+  });
+});
+
+router.get("/get_active_orders_for_store", (req, res) => {
+  let query = { store: req.decoded.user._id, status: "ON_THE_WAY" };
+  Order.find(query, (err, result) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: "Server Query Error.",
+      });
+      return;
+    }
+    if (result) {
+      res.send({
+        status: true,
+        result,
+      });
+      return;
+    }
+  });
+});
+
+router.get("/get_orders_history_for_store", (req, res) => {
+  let query = { store: req.decoded.user._id, status: "COMPLETED" };
+  Order.find(query, (err, result) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: "Server Query Error.",
+      });
+      return;
+    }
+    if (result) {
+      res.send({
+        status: true,
+        result,
+      });
+      return;
+    }
+  });
+});
+
+router.get("/get_store_account_detail", (req, res) => {
+  let query = { store: req.decoded.user._id };
+  StoreAccountDetail.findOne(query, (err, result) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: "Server Query Error.",
+      });
+      return;
+    }
+    if (result) {
+      res.send({
+        status: true,
+        result,
+      });
+      return;
+    }
+  });
+});
+
+router.put("/update_store_info", (req, res) => {
+  let id = req.decoded.user._id;
+  Store.findByIdAndUpdate(id, req.body, { new: true }, (err, result) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: "Server Query Error.",
+      });
+      return;
+    }
+    if (result) {
+      res.send({
+        status: true,
+        user: result,
+      });
+      return;
+    }
+  });
+});
+
+router.put("/update_store_password", (req, res) => {
+  let id = req.decoded.user._id;
+  let pwd = req.body.password;
+  let enc_pwd = pwd ? md5(pwd) : null;
+  let new_pwd = req.body.newPassword;
+  let new_enc_pwd = new_pwd ? md5(new_pwd) : null;
+  let query = { _id: id, password: enc_pwd };
+  Store.findOneAndUpdate(
+    query,
+    { password: new_enc_pwd },
+    { new: true },
+    (err, result) => {
+      if (err) {
+        res.send({
+          status: false,
+          msg: "Server Query Error.",
+        });
+        return;
+      }
+      if (result) {
+        res.send({
+          status: true,
+          msg: "Password Changed Successfully.",
+        });
+        return;
+      } else {
+        res.send({
+          status: false,
+          msg: "Incorrect Password.",
+        });
+        return;
+      }
+    }
+  );
+});
+
+router.post("/update_store_image", (req, res) => {
+  let id = req.decoded.user._id;
+  upload(req, res, async (err) => {
+    if (err) {
+      res.send({
+        status: false,
+        msg: err.message,
+      });
+      return;
+    } else {
+      let data = await cloudinary(req.files);
+      req.body.images = data;
+      Store.findByIdAndUpdate(id, req.body, { new: true }, (err, result) => {
+        if (err) {
+          res.send({
+            status: false,
+            msg: "Server Query Error.",
+          });
+          return;
+        }
+        if (result) {
+          res.send({
+            status: true,
+            user: result,
+          });
+          return;
+        }
+      });
+    }
+  });
+});
+
+router.get("/get_orders_history_for_rider", (req, res) => {
+  let query = { rider: req.decoded.user._id, status: "COMPLETED" };
   Order.find(query, (err, result) => {
     if (err) {
       res.send({
