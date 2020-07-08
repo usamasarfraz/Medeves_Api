@@ -15,7 +15,7 @@ module.exports = {
 	HOST: URL,
 	PORT: "",
 	SECRET: 'keepitsecretwithauthformedeves!@#',
-	EXPIRES_IN: '300s',
+	EXPIRES_IN: '86400s',
 	SMTP_FROM_EMAIL,
 	SMTP_CLIENT_ID,
 	SMTP_CLIENT_SECRET,

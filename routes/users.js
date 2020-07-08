@@ -135,7 +135,7 @@ router.get("/get_stores_for_client/:lat/:long", (req, res) => {
         },
       },
     },
-  ]).exec((err, result) => {
+  ]).exec(async (err, result) => {
     if (err) {
       res.send({
         status: false,
@@ -144,9 +144,11 @@ router.get("/get_stores_for_client/:lat/:long", (req, res) => {
       return;
     }
     if (result) {
+      let activeOrder = await Order.findOne({client: client,$or:[ {status: "PENDING"}, {status: "ACCEPTED"} ]});
       res.send({
         status: true,
         result,
+        activeOrder,
       });
       return;
     }
